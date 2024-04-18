@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "mongoose": "^8.3.2",
-    "performance-now": "^2.1.0"
+    "performance-now": "^2.1.0",
+    "pg": "^8.11.5"
   }
 }
