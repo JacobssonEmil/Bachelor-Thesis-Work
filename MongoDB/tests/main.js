@@ -4,9 +4,17 @@ const generateTestData = require('./generateTestData');
 const testWritePerformance = require('./testWritePerformance');
 const testReadPerformance = require('./testReadPerformance');
 const testComplexQueryPerformance = require('./testComplexQueryPerformance');
+const testReadLatencyPerformance = require('./testReadLatencyPerformance')
+const testWriteLatencyPerformance = require('./testWriteLatencyPerformance')
 const User = require('../models/User');
 
 const testVolumes = [1000, 10000, 50000]; // Example data volumes for complex query testing
+
+const userData = {
+    name: 'Test User',
+    email: 'testuser@example.com',
+    age: 30
+  };
 
 async function runScalabilityTests() {
   console.log("Starting scalability tests...\n");
@@ -34,12 +42,20 @@ async function runComplexQueryTests() {
 }
 
 async function main() {
+    
   await User.deleteMany({});
   await runScalabilityTests();
-  await runComplexQueryTests();
+  //await runComplexQueryTests();
+
+  
+  await User.deleteMany({});
+  console.log("\nRemoved all entries from datbase\n")
+
+  // Run write latency test
+  await testWriteLatencyPerformance(userData);
+  await testReadLatencyPerformance('testuser@example.com');
 
   console.log("\nTests completed.");
-  await User.deleteMany({});
   await mongoose.connection.close();
 }
 
