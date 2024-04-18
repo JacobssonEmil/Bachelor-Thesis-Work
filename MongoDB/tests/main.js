@@ -4,8 +4,8 @@ const generateTestData = require('./generateTestData');
 const testWritePerformance = require('./testWritePerformance');
 const testReadPerformance = require('./testReadPerformance');
 const testComplexQueryPerformance = require('./testComplexQueryPerformance');
-const testReadLatencyPerformance = require('./testReadLatencyPerformance')
-const testWriteLatencyPerformance = require('./testWriteLatencyPerformance')
+const testReadResponseTime = require('./testReadResponseTimePerformance')
+const testWriteResponseTime = require('./testWriteResponseTimePerformance')
 const User = require('../models/User');
 
 const testVolumes = [1000, 10000, 50000]; // Example data volumes for complex query testing
@@ -55,10 +55,10 @@ async function main() {
   console.log("\nRemoved all entries from datbase\n")
 
   // Run write latency test
-  console.log("\n             L A T E N C Y");
+  console.log("\n        R E S P O N S E  T I M E");
   console.log("----------------------------------------")
-  await testWriteLatencyPerformance(userData);
-  await testReadLatencyPerformance('testuser@example.com');
+  await testWriteResponseTime(userData);
+  await testReadResponseTime('testuser@example.com');
 
   console.log("\nTests completed.");
   await mongoose.connection.close();

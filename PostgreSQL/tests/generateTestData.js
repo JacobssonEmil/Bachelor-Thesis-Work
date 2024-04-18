@@ -1,4 +1,3 @@
-// generateTestData.js
 function generateTestData(n) {
     let testData = [];
     for (let i = 0; i < n; i++) {

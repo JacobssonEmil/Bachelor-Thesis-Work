@@ -1,4 +1,3 @@
-// testReadPerformance.js
 const { Client } = require('pg');
 const { performance } = require('perf_hooks');
 

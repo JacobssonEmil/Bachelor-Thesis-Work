@@ -1,24 +1,25 @@
-// testReadLatencyPerformance.js
 const { Client } = require('pg');
 const { performance } = require('perf_hooks');
 
+
 // Create a new PostgreSQL client instance
-async function testReadLatency(email) {
+async function testWriteResponseTime(userData) {
     const client = new Client({
         connectionString: 'postgresql://postgres:1234@localhost:5432/postgres'
     });
     client.connect()
       .then(() => console.log('Connected to PostgreSQL database'))
       .catch(err => console.error('Error connecting to PostgreSQL database', err));
-  const query = 'SELECT * FROM users WHERE email = $1';
+  const query = 'INSERT INTO users (name, email, age) VALUES ($1, $2, $3)';
+  const { name, email, age } = userData;
   const start = performance.now();
   try {
-    await client.query(query, [email]);
+    await client.query(query, [name, email, age]);
     const end = performance.now();
-    const latency = end - start;
-    console.log(`Read operation latency: ${latency} ms`);
+    const responseTime = end - start;
+    console.log(`Write operation Response Time: ${responseTime} ms`);
   } catch (err) {
-    console.error('Error performing read operation in PostgreSQL', err);
+    console.error('Error performing write operation in PostgreSQL', err);
   } finally {
     client.end()
       .then(() => console.log('Closed PostgreSQL database connection'))
@@ -26,4 +27,4 @@ async function testReadLatency(email) {
   }
 }
 
-module.exports = testReadLatency;
+module.exports = testWriteResponseTime;
