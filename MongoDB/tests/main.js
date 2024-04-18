@@ -18,6 +18,8 @@ const userData = {
 
 async function runScalabilityTests() {
   console.log("Starting scalability tests...\n");
+  console.log("\n         S C A L A B I L I T Y");
+  console.log("----------------------------------------")
 
   for(let factor = 1; factor <= 5; factor++) {
     const currentEntries = 1000 * factor;
@@ -26,6 +28,7 @@ async function runScalabilityTests() {
     await User.deleteMany({});
     await testWritePerformance(testData);
     await testReadPerformance(currentEntries);
+    console.log("\n---------------------------------------------------------------")
   }
 }
 
@@ -52,6 +55,8 @@ async function main() {
   console.log("\nRemoved all entries from datbase\n")
 
   // Run write latency test
+  console.log("\n             L A T E N C Y");
+  console.log("----------------------------------------")
   await testWriteLatencyPerformance(userData);
   await testReadLatencyPerformance('testuser@example.com');
 
