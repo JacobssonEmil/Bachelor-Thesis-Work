@@ -7,7 +7,8 @@ const testComplexQueryPerformance = require('./testComplexQueryPerformance');
 const testReadResponseTime = require('./testReadResponseTimePerformance')
 const testWriteResponseTime = require('./testWriteResponseTimePerformance')
 const testUpdateResponseTime = require('./testUpdateResponeTimePerformance.js')
-const testUpdatePerformance = require('./testUpdateResponeTimePerformance.js')
+const testUpdatePerformance = require('./testUpdatePerformance.js')
+const testDeleteResponseTime = require('./testDeleteResponeTimePerformance.js')
 const User = require('../models/User');
 
 
@@ -30,7 +31,7 @@ async function runScalabilityTests() {
     await User.deleteMany({});
     await testWritePerformance(testData);
     await testReadPerformance(currentEntries);
-    await testUpdatePerformance({originalEmail: `user${currentEntries/2}@example.com`, newEmail: `updated@example.com`})
+    await testUpdatePerformance({originalEmail: `user${currentEntries/2}@example.com`, newEmail: `updated@example.com`}, currentEntries)
     console.log("\n---------------------------------------------------------------")
   }
 }
