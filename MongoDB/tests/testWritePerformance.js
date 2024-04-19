@@ -1,7 +1,7 @@
 const performanceNow = require('performance-now');
 const User = require('../models/User');
 
-async function testWriteLatencyPerformance(testData) {
+async function testWritePerformance(testData) {
   const start = performanceNow();
   await User.insertMany(testData);
   const end = performanceNow();
@@ -10,4 +10,4 @@ async function testWriteLatencyPerformance(testData) {
   console.log(`Write Throughput: ${(testData.length / duration).toFixed(3)} operations per ms`);
 }
 
-module.exports = testWriteLatencyPerformance;
+module.exports = testWritePerformance;
