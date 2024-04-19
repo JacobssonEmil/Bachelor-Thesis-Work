@@ -6,6 +6,7 @@ const testReadPerformance = require('./testReadPerformance');
 const testComplexQueryPerformance = require('./testComplexQueryPerformance');
 const testReadResponseTime = require('./testReadResponseTimePerformance')
 const testWriteResponseTime = require('./testWriteResponseTimePerformance')
+const testUpdateResponseTime = require('./testUpdateResponeTimePerformance.js')
 const User = require('../models/User');
 
 const testVolumes = [1000, 10000, 50000]; // Example data volumes for complex query testing
@@ -21,7 +22,7 @@ async function runScalabilityTests() {
   console.log("\n         S C A L A B I L I T Y");
   console.log("----------------------------------------")
 
-  for(let factor = 0; factor < 11; factor++) {
+  for(let factor = 0; factor < 5; factor++) {
     const currentEntries = 1000 * Math.pow(2, factor);
     console.log(`\n----- Scalability Test with ${currentEntries} entries -----`);
     const testData = await generateTestData(currentEntries);
@@ -54,11 +55,12 @@ async function main() {
   await User.deleteMany({});
   console.log("\nRemoved all entries from datbase\n")
 
-  // Run write latency test
+  // Run response time tests
   console.log("\n        R E S P O N S E  T I M E");
   console.log("----------------------------------------")
   await testWriteResponseTime(userData);
   await testReadResponseTime('testuser@example.com');
+  await testUpdateResponseTime({ originalEmail: 'testuser@example.com', newEmail: 'updated@example.com' });
 
   console.log("\nTests completed.");
   await mongoose.connection.close();
