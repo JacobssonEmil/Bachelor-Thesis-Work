@@ -7,9 +7,10 @@ const testComplexQueryPerformance = require('./testComplexQueryPerformance');
 const testReadResponseTime = require('./testReadResponseTimePerformance')
 const testWriteResponseTime = require('./testWriteResponseTimePerformance')
 const testUpdateResponseTime = require('./testUpdateResponeTimePerformance.js')
+const testUpdatePerformance = require('./testUpdateResponeTimePerformance.js')
 const User = require('../models/User');
 
-const testVolumes = [1000, 10000, 50000]; // Example data volumes for complex query testing
+
 
 const userData = {
     name: 'Test User',
@@ -29,10 +30,12 @@ async function runScalabilityTests() {
     await User.deleteMany({});
     await testWritePerformance(testData);
     await testReadPerformance(currentEntries);
+    await testUpdatePerformance({originalEmail: `user${currentEntries/2}@example.com`, newEmail: `updated@example.com`})
     console.log("\n---------------------------------------------------------------")
   }
 }
 
+/*
 async function runComplexQueryTests() {
   console.log("\nStarting complex query performance tests...\n");
 
@@ -44,6 +47,7 @@ async function runComplexQueryTests() {
     await testComplexQueryPerformance(); // This could be adjusted to pass volume if needed
   }
 }
+*/
 
 async function main() {
     

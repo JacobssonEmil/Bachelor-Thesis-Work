@@ -6,7 +6,6 @@ const testReadPerformance = require('./testReadPerformance');
 const testReadResponseTime = require('./testReadResponseTimePerformance');
 const testWriteResponseTime = require('./testWriteResponseTimePerformance');
 
-const testVolumes = [1000, 10000, 50000]; // Example data volumes for complex query testing
 
 const userData = {
   name: 'Test User',
