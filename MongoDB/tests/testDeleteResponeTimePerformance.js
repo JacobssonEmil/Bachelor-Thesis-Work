@@ -3,9 +3,9 @@ const User = require('../models/User');
 
 async function testDeleteResponseTime(email) {
   const start = performanceNow();
-  await User.findOne({ email });
+  await User.deleteOne({ email });
   const end = performanceNow();
   const responseTime = (end - start).toFixed(3);
-  console.log(`Read operation Response Time: ${responseTime} ms`);
+  console.log(`Delete operation Response Time: ${responseTime} ms`);
 }
 module.exports = testDeleteResponseTime;

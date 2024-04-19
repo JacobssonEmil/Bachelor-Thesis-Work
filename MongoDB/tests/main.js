@@ -9,6 +9,7 @@ const testWriteResponseTime = require('./testWriteResponseTimePerformance')
 const testUpdateResponseTime = require('./testUpdateResponeTimePerformance.js')
 const testUpdatePerformance = require('./testUpdatePerformance.js')
 const testDeleteResponseTime = require('./testDeleteResponeTimePerformance.js')
+const testDeletePerformance = require('./testDeletePerformance.js')
 const User = require('../models/User');
 
 
@@ -24,7 +25,7 @@ async function runScalabilityTests() {
   console.log("\n         S C A L A B I L I T Y");
   console.log("----------------------------------------")
 
-  for(let factor = 0; factor < 5; factor++) {
+  for(let factor = 0; factor < 11; factor++) {
     const currentEntries = 1000 * Math.pow(2, factor);
     console.log(`\n----- Scalability Test with ${currentEntries} entries -----`);
     const testData = await generateTestData(currentEntries);
@@ -32,6 +33,7 @@ async function runScalabilityTests() {
     await testWritePerformance(testData);
     await testReadPerformance(currentEntries);
     await testUpdatePerformance({originalEmail: `user${currentEntries/2}@example.com`, newEmail: `updated@example.com`}, currentEntries)
+    await testDeletePerformance('updated@example.com', currentEntries)
     console.log("\n---------------------------------------------------------------")
   }
 }
@@ -57,6 +59,7 @@ async function main() {
   //await runComplexQueryTests();
 
   
+  
   await User.deleteMany({});
   console.log("\nRemoved all entries from datbase\n")
 
@@ -66,8 +69,10 @@ async function main() {
   await testWriteResponseTime(userData);
   await testReadResponseTime('testuser@example.com');
   await testUpdateResponseTime({ originalEmail: 'testuser@example.com', newEmail: 'updated@example.com' });
+  await testDeleteResponseTime('updated@example.com');
 
   console.log("\nTests completed.");
+  
   await mongoose.connection.close();
 }
 
