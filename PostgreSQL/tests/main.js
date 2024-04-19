@@ -39,14 +39,17 @@ async function runScalabilityTests() {
 }
 
 async function main() {
+  await User.deleteMany({});
   try {
     await runScalabilityTests();
 
     // Run write latency test
+    await User.deleteMany({});
+  
     console.log("\n        R E S P O N S E  T I M E");
     console.log("----------------------------------------");
-    await testReadResponseTime(userData);
-    await testWriteResponseTime('testuser@example.com');
+    await testWriteResponseTime(userData);
+    await testReadResponseTime('testuser@example.com');
 
     console.log("\nTests completed.");
   } catch (err) {
