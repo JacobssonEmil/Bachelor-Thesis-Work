@@ -44,7 +44,7 @@ async function main() {
 
     // Run write latency test
     await User.deleteMany({});
-  
+
     console.log("\n        R E S P O N S E  T I M E");
     console.log("----------------------------------------");
     await testWriteResponseTime(userData);
@@ -61,3 +61,4 @@ async function main() {
 }
 
 main().then(() => process.exit(0));
+
