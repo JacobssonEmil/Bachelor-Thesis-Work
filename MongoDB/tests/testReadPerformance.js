@@ -1,7 +1,7 @@
 const performanceNow = require('performance-now');
 const User = require('../models/User');
 
-async function testReadLatencyPerformance(n) {
+async function testReadPerformance(n) {
   const start = performanceNow();
   await User.find({});
   const end = performanceNow();
@@ -10,4 +10,4 @@ async function testReadLatencyPerformance(n) {
   console.log(`Read Throughput: ${(n / duration).toFixed(3)} operations per ms`);
 }
 
-module.exports = testReadLatencyPerformance;
+module.exports = testReadPerformance;
