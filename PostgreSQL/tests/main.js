@@ -27,8 +27,8 @@ async function runScalabilityTests() {
   console.log("\n         S C A L A B I L I T Y");
   console.log("----------------------------------------");
 
-  for (let factor = 1; factor <= 5; factor++) {
-    const currentEntries = 1000 * factor;
+  for(let factor = 0; factor < 11; factor++) {
+    const currentEntries = 1000 * Math.pow(2, factor);
     console.log(`\n----- Scalability Test with ${currentEntries} entries -----`);
     const testData = generateTestData(currentEntries);
     await User.deleteMany();
