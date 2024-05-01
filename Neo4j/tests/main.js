@@ -56,7 +56,7 @@ async function runComplexQueryTests() {
 }
 
 async function simulateUserRequests(threads) {
-    const currentEntries = 100;
+    const currentEntries = 10000;
     const testData = await generateTestData(driver, currentEntries);
     console.log(`\n----- Simulating user requests with ${threads} threads -----`);
 
@@ -73,9 +73,6 @@ async function simulateUserRequests(threads) {
     console.log(`Average Read Operation Duration: ${averageDurations.read} ms`);
     console.log(`Average Update Operation Duration: ${averageDurations.update} ms`);
     console.log(`Average Delete Operation Duration: ${averageDurations.delete} ms`);
-
-    // Run complex queries as part of the simulation
-    await runComplexQueryTests();
 
     //await driver.close();  // Close the driver at the end of simulation
 }
@@ -99,6 +96,8 @@ async function main() {
             await clearDatabase(driver);
         }
 
+        // Run complex queries as part of the simulation
+        await runComplexQueryTests();
         console.log("\nUser requests simulation completed.");
     } catch (error) {
         console.error(error);
