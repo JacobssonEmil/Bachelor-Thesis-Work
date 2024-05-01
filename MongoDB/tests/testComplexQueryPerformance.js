@@ -1,18 +1,89 @@
 const performanceNow = require('performance-now');
 const User = require('../models/User');
 
-// This is an example of a complex query function. Adjust according to your needs.
-async function testComplexQueryPerformance() {
+// Test User Retention Analysis Query Performance
+async function testUserRetentionAnalysisPerformance() {
   const start = performanceNow();
   
-  // Example of a complex query: find users in a certain age range, sort by name, limit to 100 results.
-  await User.find({ age: { $gte: 18, $lte: 65 } })
-            .sort({ name: 1 })
-            .limit(100);
+  await User.aggregate([
+    {
+      $project: {
+        signup_month: { $dateToString: { format: "%Y-%m", date: "$created_at" } },
+        active_last_month: {
+          $cond: {
+            if: { $gte: ["$last_login", { $dateSubtract: { startDate: new Date(), unit: "month", amount: 1 } }] },
+            then: 1,
+            else: 0
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: "$signup_month",
+        total_users: { $sum: 1 },
+        active_last_month: { $sum: "$active_last_month" }
+      }
+    },
+    { $sort: { _id: -1 } }
+  ]);
 
   const end = performanceNow();
-  const duration = (end - start).toFixed(3);
-  console.log(`Complex query operation took: ${duration} ms`);
+  console.log(`User Retention Analysis operation took: ${(end - start).toFixed(3)} ms`);
 }
 
-module.exports = testComplexQueryPerformance;
+// Test Demographic and Status Distribution Query Performance
+async function testDemographicStatusDistributionPerformance() {
+  const start = performanceNow();
+  
+  await User.aggregate([
+    {
+      $match: { status: { $in: ["active", "suspended"] } }
+    },
+    {
+      $group: {
+        _id: { country: "$country", status: "$status" },
+        average_age: { $avg: "$age" },
+        user_count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { "_id.country": 1, user_count: -1 }
+    }
+  ]);
+
+  const end = performanceNow();
+  console.log(`Demographic and Status Distribution operation took: ${(end - start).toFixed(3)} ms`);
+}
+
+// Test Inactivity Analysis for Potential Account Cleanup Performance
+async function testInactivityAnalysisPerformance() {
+  const start = performanceNow();
+  
+  await User.aggregate([
+    {
+      $match: {
+        status: "active",
+        last_login: { $lt: new Date(new Date() - 180 * 24 * 60 * 60 * 1000) }  // 180 days ago
+      }
+    },
+    {
+      $project: {
+        name: 1,
+        email: 1,
+        days_inactive: { $subtract: [new Date(), "$last_login"] }
+      }
+    },
+    {
+      $sort: { days_inactive: -1 }
+    },
+    {
+      $limit: 100
+    }
+  ]);
+
+  const end = performanceNow();
+  console.log(`Inactivity Analysis operation took: ${(end - start).toFixed(3)} ms`);
+}
+
+module.exports = {testDemographicStatusDistributionPerformance, testInactivityAnalysisPerformance, testUserRetentionAnalysisPerformance};

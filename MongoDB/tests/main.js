@@ -5,17 +5,41 @@ const testWritePerformance = require('./testWritePerformance');
 const testReadPerformance = require('./testReadPerformance');
 const testUpdatePerformance = require('./testUpdatePerformance');
 const testDeletePerformance = require('./testDeletePerformance');
+const {
+  testUserRetentionAnalysisPerformance,
+  testDemographicStatusDistributionPerformance,
+  testInactivityAnalysisPerformance
+} = require('./testComplexQueryPerformance');
 const User = require('../models/User');
 
+async function warmUpDatabase(testData) {
+  // Insert initial test data multiple times to increase volume
+  for (let i = 0; i < 3; i++) {
+      await User.insertMany(testData.map(user => ({...user, email: `warmup${i}${user.email}`})));
+  }
+
+  // Perform comprehensive read operations
+  await User.find({});  // Read all documents to warm up the read path
+  await User.find({ age: { $gt: 30 } });  // Query with a condition
+  await User.aggregate([{ $group: { _id: "$country", count: { $sum: 1 } } }]);  // Aggregation to warm up more complex query paths
+
+  // Update operations to warm up the write path
+  await User.updateMany({ age: { $lt: 50 } }, { $set: { last_login: new Date() } });
+  await User.updateMany({ age: { $gte: 50 } }, { $set: { last_login: new Date(), status: 'active' } });
+
+  // Delete operation to include cleanup tasks in warm-up
+  await User.deleteMany({ email: /warmup2/ });  // Delete entries from the last insertion round
+
+  console.log('Warm-up phase completed.');
+}
+
 async function simulateUserRequests(threads) {
+  const currentEntries = 100;
+  const testData = await generateTestData(currentEntries);
   console.log(`\n----- Simulating user requests with ${threads} threads -----`);
 
   await User.deleteMany({});
 
-  const currentEntries = 100;
-  const testData = await generateTestData(currentEntries);
-
-  // Simulate multiple users making requests concurrently
   const writePromises = [];
   const readPromises = [];
   const updatePromises = [];
@@ -26,6 +50,7 @@ async function simulateUserRequests(threads) {
     readPromises.push(testReadPerformance(currentEntries, i));
     updatePromises.push(testUpdatePerformance({ originalEmail: `user${currentEntries / 2}@example.com`, newEmail: `updated@example.com` }, currentEntries));
     deletePromises.push(testDeletePerformance('updated@example.com', currentEntries));
+    await User.deleteMany({});
   }
 
   const writeDurations = await Promise.all(writePromises).then(durations => durations.map(parseFloat));
@@ -53,16 +78,36 @@ async function simulateUserRequests(threads) {
   return [averageWriteDuration, averageReadDuration, averageUpdateDuration, averageDeleteDuration];
 }
 
+async function runComplexQueryTests() {
+  const currentEntries = 10000;
+  const testData = await generateTestData(currentEntries);
+  await User.insertMany(testData)
+  console.log('\nStarting complex query tests...');
+  await testUserRetentionAnalysisPerformance();
+  await testDemographicStatusDistributionPerformance();
+  await testInactivityAnalysisPerformance();
+  console.log('Complex query tests completed.');
+  await User.deleteMany({});
+}
+
 async function main() {
   await mongoose.connect('mongodb://localhost:27017/testdb', { useNewUrlParser: true, useUnifiedTopology: true });
   console.log("Connected to MongoDB");
+  const currentEntries = 10000;
+  const testData = await generateTestData(currentEntries);
 
   const numCPUs = os.cpus().length;
   const maxThreads = numCPUs > 1 ? numCPUs - 1 : 1;
 
   const averageDurationsByThreads = [];
 
-  // Gradually increase the number of threads
+   // Warm-up phase: perform some operations to "warm up" the database
+   console.log('Starting warm-up phase...');
+   await warmUpDatabase(testData);
+ 
+   // Clear the collection after warm-up
+   await User.deleteMany({});
+  
   for (let threads = 1; threads <= maxThreads; threads++) {
     const averageDurations = await simulateUserRequests(threads);
     averageDurationsByThreads.push(averageDurations);
@@ -81,6 +126,7 @@ async function main() {
   console.log(`Overall Average Read Operation Duration: ${overallAverageDurations[1].toFixed(3)} ms`);
   console.log(`Overall Average Update Operation Duration: ${overallAverageDurations[2].toFixed(3)} ms`);
   console.log(`Overall Average Delete Operation Duration: ${overallAverageDurations[3].toFixed(3)} ms`);
+  await runComplexQueryTests()
 
   await mongoose.connection.close();
 }
