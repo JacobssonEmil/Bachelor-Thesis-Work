@@ -1,73 +1,34 @@
-// User.js
-const { Client } = require('pg');
-
-// Create a new PostgreSQL client instance
-const client = new Client({
-  connectionString: 'postgresql://postgres:1234@localhost:5432/postgres'
-});
-
-// Connect to the PostgreSQL database
-client.connect()
-  .then(() => console.log('Connected to PostgreSQL database'))
-  .catch(err => console.error('Error connecting to PostgreSQL database', err));
-
-// Define the user schema
-const userSchema = `
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR,
-  email VARCHAR,
-  age INTEGER
-);
+const createUserTable = `
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255),
+    age INTEGER,
+    created_at TIMESTAMP,
+    last_login TIMESTAMP,
+    status VARCHAR(50),
+    country VARCHAR(100)
+  );
 `;
 
-// Create the users table if it doesn't exist
-client.query(userSchema)
-  .then(() => console.log('Users table created successfully'))
-  .catch(err => console.error('Error creating users table', err));
+async function setupDatabase(client) {
+  // Create the users table if it doesn't exist
+  await client.query(createUserTable);
 
-// Define the User model functions
-const User = {
-  insertMany: async function (data) {
-    const insertQuery = 'INSERT INTO users (name, email, age) VALUES ($1, $2, $3)';
-    try {
-      await Promise.all(data.map(user => client.query(insertQuery, [user.name, user.email, user.age])));
-      console.log(`Inserted ${data.length} users into PostgreSQL`);
-    } catch (err) {
-      console.error('Error inserting users into PostgreSQL', err);
-    }
-  },
-
-  findOne: async function (filter) {
-    const { email } = filter;
-    const query = 'SELECT * FROM users WHERE email = $1';
-    try {
-      const result = await client.query(query, [email]);
-      console.log('Found user:', result.rows[0]);
-    } catch (err) {
-      console.error('Error finding user in PostgreSQL', err);
-    }
-  },
-
-  find: async function () {
-    const query = 'SELECT * FROM users';
-    try {
-      const result = await client.query(query);
-      console.log('Found users:', result.rows);
-    } catch (err) {
-      console.error('Error finding users in PostgreSQL', err);
-    }
-  },
-
-  deleteMany: async function () {
-    const query = 'DELETE FROM users';
-    try {
-      await client.query(query);
-      console.log('Deleted all users from PostgreSQL');
-    } catch (err) {
-      console.error('Error deleting users from PostgreSQL', err);
+  // Define a User class to represent the users table
+  class User {
+    constructor(data) {
+      this.name = data.name;
+      this.email = data.email;
+      this.age = data.age;
+      this.createdAt = data.created_at;
+      this.lastLogin = data.last_login;
+      this.status = data.status;
+      this.country = data.country;
     }
   }
-};
 
-module.exports = User;
+  return User;
+}
+
+module.exports = setupDatabase; // Export the setupDatabase function

@@ -1,11 +1,11 @@
 const performanceNow = require('performance-now');
 
-async function testReadPerformance(n, client) {
+async function testDeletePerformance(email, client) {
   const start = performanceNow();
-  await client.query('SELECT * FROM users');
+  await client.query('DELETE FROM users WHERE email = $1', [email]);
   const end = performanceNow();
   const duration = (end - start).toFixed(3);
   return duration;
 }
 
-module.exports = testReadPerformance;
+module.exports = testDeletePerformance;
