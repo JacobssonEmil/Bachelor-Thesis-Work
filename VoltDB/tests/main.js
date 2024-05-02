@@ -145,7 +145,7 @@ async function main() {
     console.log(`Overall Average Delete Operation Duration: ${overallAverageDurations[3].toFixed(3)} ms`);
 
     await runComplexQueryTests(client);
-    await client.query('DELETE FROM users');
+    //await client.query('DELETE FROM users');
     await client.end();
     console.log('Database connection closed.');
   } catch (error) {
