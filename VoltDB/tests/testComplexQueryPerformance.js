@@ -51,9 +51,9 @@ async function testInactivityAnalysisPerformance(client) {
     SELECT
       name,
       email,
-      EXTRACT(DAY FROM (NOW()::DATE - last_login)) AS days_inactive
+      DATE_PART('day', NOW()::DATE) - DATE_PART('day', last_login::DATE) AS days_inactive
     FROM users
-    WHERE status = 'active' AND last_login < NOW()::DATE - INTERVAL '180 days'
+    WHERE status = 'active' AND last_login < NOW() - INTERVAL '180 days'
     ORDER BY days_inactive DESC
     LIMIT 100;
   `;

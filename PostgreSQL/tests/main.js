@@ -40,7 +40,7 @@ async function warmUpDatabase(testData, client) {
 }
 
 async function simulateUserRequests(threads, client) {
-  const currentEntries = 1000;
+  const currentEntries = 10000;
   const testData = await generateTestData(currentEntries);
   console.log(`\n----- Simulating user requests with ${threads} threads -----`);
 

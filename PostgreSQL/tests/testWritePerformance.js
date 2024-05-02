@@ -8,7 +8,7 @@ async function testWritePerformance(testData, client) {
     INSERT INTO users (name, email, age, created_at, last_login, status, country)
     VALUES ${testData.map(data => `('${data.name}', '${data.email}', ${data.age}, '${data.createdAt}', '${data.lastLogin}', '${data.status}', '${data.country}')`).join(',')}
   `;
-  
+
   await client.query(insertQuery);
 
   const end = performanceNow();

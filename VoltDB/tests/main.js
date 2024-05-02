@@ -23,30 +23,30 @@ const client = new Client({
 });
 
 async function warmUpDatabase(testData, client) {
+  await client.query('DELETE FROM users;');
   // Insert initial test data multiple times to increase volume
   for (let i = 0; i < 3; i++) {
-    const currentEntries = 10000;
-    const testData = await generateTestData(currentEntries);
-    const values = testData.map(user => [user.email, user.name, user.age, user.country]);
-    await client.query(`
-    INSERT INTO users (name, email, age, created_at, last_login, status, country)
-    VALUES ${testData.map(data => `('${data.name}', '${data.email}', ${data.age}, '${data.createdAt}', '${data.lastLogin}', '${data.status}', '${data.country}')`).join(',')}
-  `);
+      const currentEntries = 100;
+      const testData = await generateTestData(currentEntries);
+      
+      // Ensure unique email for each entry to prevent violation of the unique constraint
+      const values = testData.map((user, index) => [
+          user.email + i + index, // Append 'i' and 'index' to make email unique
+          user.name,
+          user.age,
+          user.country
+      ]);
+
+      const insertQuery = `
+      INSERT INTO users (email, name, age, country, created_at, last_login, status)
+      VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}', NOW(), NULL, 'active')`).join(',')}
+      `;
+      
+      await client.query(insertQuery);
   }
 
-  // Perform comprehensive read operations
-  await client.query('SELECT * FROM users'); // Read all documents to warm up the read path
-  await client.query('SELECT * FROM users WHERE age > 30'); // Query with a condition
-  await client.query('SELECT country, COUNT(*) FROM users GROUP BY country'); // Aggregation to warm up more complex query paths
-
-  // Update operations to warm up the write path
-  await client.query('UPDATE users SET last_login = NOW() WHERE age < 50');
-  await client.query('UPDATE users SET last_login = NOW(), status = $1 WHERE age >= 50', ['active']);
-
-  // Delete operation to include cleanup tasks in warm-up
-  await client.query('DELETE FROM users');
-
   console.log('Warm-up phase completed.');
+  await client.query('DELETE FROM users;');
 }
 
 async function simulateUserRequests(threads, client) {
@@ -117,12 +117,16 @@ async function main() {
     const User = await setupDatabase(client); // Assume setupDatabase correctly initializes the User table and returns a User class
 
     // Example: Perform database operations like warm-up and tests
-    const testData = await generateTestData(10000); // Generate or load test data
+    const testData = await generateTestData(1000); // Generate or load test data
+    const numCPUs = os.cpus().length;
+    const maxThreads = numCPUs > 1 ? numCPUs - 1 : 1;
+    const averageDurationsByThreads = [];
     await warmUpDatabase(testData, client);
     console.log('Database has been warmed up.');
 
     // Optionally, run performance tests
     console.log('Starting performance tests...');
+    
     for (let threads = 1; threads <= maxThreads; threads++) {
       const averageDurations = await simulateUserRequests(threads, client);
       averageDurationsByThreads.push(averageDurations);
@@ -141,6 +145,7 @@ async function main() {
     console.log(`Overall Average Delete Operation Duration: ${overallAverageDurations[3].toFixed(3)} ms`);
 
     await runComplexQueryTests(client);
+    await client.query('DELETE FROM users');
     await client.end();
     console.log('Database connection closed.');
   } catch (error) {
