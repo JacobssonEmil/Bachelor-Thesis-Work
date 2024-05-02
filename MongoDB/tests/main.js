@@ -16,14 +16,25 @@ const scales = [100, 1000, 10000, 100000]; // Different scales to test
 // MongoDB Connection URI
 const mongoURI = 'mongodb://localhost:27017/testdb';
 
+async function warmUpDatabase() {
+  console.log('Warming up database...');
+  const smallScale = 10; // Adjust the scale for warm-up
+  const testData = await generateTestData(smallScale);
+  await User.insertMany(testData);
+  console.log('Database warmed up successfully.');
+}
+
 async function runTests() {
   try {
     // Connect to MongoDB
     await mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log('MongoDB connected successfully.');
 
+    // Warm up the database
+    await warmUpDatabase();
+
     for (const scale of scales) {
-      console.log(`Testing with ${scale} records...`);
+      console.log(`\n\nTesting with ${scale} records...`);
 
       // Clean up existing data
       await User.deleteMany({});
