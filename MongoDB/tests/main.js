@@ -56,7 +56,7 @@ async function runTests() {
       for (const point of points) {
         const sampleUser = testData[point];
     
-        const readDuration = await testReadPerformance(driver, sampleUser);
+        const readDuration = await testReadPerformance(sampleUser);
         totalReadDuration += parseFloat(readDuration);
     
         const updateDuration = await testUpdatePerformance({ originalEmail: sampleUser.email, newEmail: `updated_${sampleUser.email}` });
