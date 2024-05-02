@@ -4,19 +4,18 @@ const performanceNow = require('performance-now');
 async function testUserRetentionAnalysisPerformance(client) {
   const start = performanceNow();
 
-  // Construct SQL query to perform user retention analysis
+  // Updated SQL query to perform user retention analysis for CockroachDB
   const userRetentionQuery = `
     SELECT
       TO_CHAR(created_at, 'YYYY-MM') AS signup_month,
       COUNT(*) AS total_users,
-      SUM(CASE WHEN last_login >= NOW() - INTERVAL '1 month' THEN 1 ELSE 0 END) AS active_last_month
+      SUM(CASE WHEN last_login >= NOW()::DATE - INTERVAL '1 month' THEN 1 ELSE 0 END) AS active_last_month
     FROM users
     GROUP BY signup_month
     ORDER BY signup_month DESC;
   `;
-  
-  await client.query(userRetentionQuery);
 
+  await client.query(userRetentionQuery);
   const end = performanceNow();
   console.log(`User Retention Analysis operation took: ${(end - start).toFixed(3)} ms`);
 }
@@ -25,7 +24,7 @@ async function testUserRetentionAnalysisPerformance(client) {
 async function testDemographicStatusDistributionPerformance(client) {
   const start = performanceNow();
 
-  // Construct SQL query to perform demographic and status distribution analysis
+  // Updated SQL query for demographic and status distribution analysis
   const demographicQuery = `
     SELECT
       country,
@@ -39,7 +38,6 @@ async function testDemographicStatusDistributionPerformance(client) {
   `;
 
   await client.query(demographicQuery);
-
   const end = performanceNow();
   console.log(`Demographic and Status Distribution operation took: ${(end - start).toFixed(3)} ms`);
 }
@@ -48,22 +46,25 @@ async function testDemographicStatusDistributionPerformance(client) {
 async function testInactivityAnalysisPerformance(client) {
   const start = performanceNow();
 
-  // Construct SQL query to perform inactivity analysis
+  // Updated SQL query to perform inactivity analysis
   const inactivityQuery = `
     SELECT
       name,
       email,
-      EXTRACT(DAY FROM NOW() - last_login) AS days_inactive
+      EXTRACT(DAY FROM (NOW()::DATE - last_login)) AS days_inactive
     FROM users
-    WHERE status = 'active' AND last_login < NOW() - INTERVAL '180 days'
+    WHERE status = 'active' AND last_login < NOW()::DATE - INTERVAL '180 days'
     ORDER BY days_inactive DESC
     LIMIT 100;
   `;
 
   await client.query(inactivityQuery);
-
   const end = performanceNow();
   console.log(`Inactivity Analysis operation took: ${(end - start).toFixed(3)} ms`);
 }
 
-module.exports = { testDemographicStatusDistributionPerformance, testInactivityAnalysisPerformance, testUserRetentionAnalysisPerformance };
+module.exports = {
+  testDemographicStatusDistributionPerformance,
+  testInactivityAnalysisPerformance,
+  testUserRetentionAnalysisPerformance
+};

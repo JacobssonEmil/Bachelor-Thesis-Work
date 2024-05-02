@@ -1,5 +1,7 @@
+require('dotenv').config(); // Load environment variables
+const { Client } = require('pg'); // Import the Client class from the pg module
 const os = require('os');
-const { VoltClient, VoltConfiguration, Query, ProcedureInvocation } = require('@voltdb/voltdb-client-node');
+
 const generateTestData = require('./generateTestData');
 const testWritePerformance = require('./testWritePerformance');
 const testReadPerformance = require('./testReadPerformance');
@@ -12,22 +14,37 @@ const {
 } = require('./testComplexQueryPerformance');
 const setupDatabase = require('../models/User');
 
+// Create a new client instance using connection details from .env file
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: true // Set to true for production using verify-full
+  }
+});
+
 async function warmUpDatabase(testData, client) {
+  // Insert initial test data multiple times to increase volume
   for (let i = 0; i < 3; i++) {
     const currentEntries = 10000;
     const testData = await generateTestData(currentEntries);
-    const insertProc = new ProcedureInvocation("User.Insert", testData.map(user => [user.name, user.email, user.age, user.createdAt, user.lastLogin, user.status, user.country]));
-    await client.callProcedure(insertProc);
+    const values = testData.map(user => [user.email, user.name, user.age, user.country]);
+    await client.query(`
+    INSERT INTO users (name, email, age, created_at, last_login, status, country)
+    VALUES ${testData.map(data => `('${data.name}', '${data.email}', ${data.age}, '${data.createdAt}', '${data.lastLogin}', '${data.status}', '${data.country}')`).join(',')}
+  `);
   }
 
-  // Perform various queries
-  await client.callProcedure(new ProcedureInvocation("SelectAll"));
-  await client.callProcedure(new ProcedureInvocation("SelectByAge", [30]));
-  await client.callProcedure(new ProcedureInvocation("GroupByCountry"));
+  // Perform comprehensive read operations
+  await client.query('SELECT * FROM users'); // Read all documents to warm up the read path
+  await client.query('SELECT * FROM users WHERE age > 30'); // Query with a condition
+  await client.query('SELECT country, COUNT(*) FROM users GROUP BY country'); // Aggregation to warm up more complex query paths
 
-  // Updates and deletes
-  await client.callProcedure(new ProcedureInvocation("UpdateLastLogin", [50]));
-  await client.callProcedure(new ProcedureInvocation("DeleteUsers"));
+  // Update operations to warm up the write path
+  await client.query('UPDATE users SET last_login = NOW() WHERE age < 50');
+  await client.query('UPDATE users SET last_login = NOW(), status = $1 WHERE age >= 50', ['active']);
+
+  // Delete operation to include cleanup tasks in warm-up
+  await client.query('DELETE FROM users');
 
   console.log('Warm-up phase completed.');
 }
@@ -36,6 +53,8 @@ async function simulateUserRequests(threads, client) {
   const currentEntries = 1000;
   const testData = await generateTestData(currentEntries);
   console.log(`\n----- Simulating user requests with ${threads} threads -----`);
+
+  await client.query('DELETE FROM users');
 
   const writePromises = [];
   const readPromises = [];
@@ -47,6 +66,7 @@ async function simulateUserRequests(threads, client) {
     readPromises.push(testReadPerformance(currentEntries, client));
     updatePromises.push(testUpdatePerformance({ originalEmail: `user${currentEntries / 2}@example.com`, newEmail: `updated@example.com` }, client));
     deletePromises.push(testDeletePerformance('updated@example.com', client));
+    await client.query('DELETE FROM users');
   }
 
   const writeDurations = await Promise.all(writePromises).then(durations => durations.map(parseFloat));
@@ -91,57 +111,48 @@ async function runComplexQueryTests(client) {
 }
 
 async function main() {
-  const configurations = [new VoltConfiguration('hostname')];
-  const client = new VoltClient(configurations);
-
   try {
     await client.connect();
-    console.log('Connected to VoltDB');
+    console.log('Connected to CockroachDB');
+    const User = await setupDatabase(client); // Assume setupDatabase correctly initializes the User table and returns a User class
 
-    const User = await setupDatabase(client);
-    console.log('User class has been defined');
+    // Example: Perform database operations like warm-up and tests
+    const testData = await generateTestData(10000); // Generate or load test data
+    await warmUpDatabase(testData, client);
+    console.log('Database has been warmed up.');
+
+    // Optionally, run performance tests
+    console.log('Starting performance tests...');
+    for (let threads = 1; threads <= maxThreads; threads++) {
+      const averageDurations = await simulateUserRequests(threads, client);
+      averageDurationsByThreads.push(averageDurations);
+    }
+    console.log("\nUser requests simulation completed.");
+    // Calculate overall average durations
+    const totalAverageDurations = averageDurationsByThreads.reduce((acc, curr) => {
+      return acc.map((value, index) => value + curr[index]);
+    }, [0, 0, 0, 0]);
+
+    const overallAverageDurations = totalAverageDurations.map(value => value / maxThreads);
+
+    console.log(`\nOverall Average Write Operation Duration: ${overallAverageDurations[0].toFixed(3)} ms`);
+    console.log(`Overall Average Read Operation Duration: ${overallAverageDurations[1].toFixed(3)} ms`);
+    console.log(`Overall Average Update Operation Duration: ${overallAverageDurations[2].toFixed(3)} ms`);
+    console.log(`Overall Average Delete Operation Duration: ${overallAverageDurations[3].toFixed(3)} ms`);
+
+    await runComplexQueryTests(client);
+    await client.end();
+    console.log('Database connection closed.');
   } catch (error) {
-    console.error('Error setting up database:', error);
+    console.error('Error during database operations:', error);
+    await client.end();
   }
   
-  console.log("Connected to VoltDB");
-  const currentEntries = 10;
-  const testData = await generateTestData(currentEntries);
-
-  const numCPUs = os.cpus().length;
-  const maxThreads = numCPUs > 1 ? numCPUs - 1 : 1;
-
-  const averageDurationsByThreads = [];
-
-  
-  // Warm-up phase: perform some operations to "warm up" the database
-  console.log('Starting warm-up phase...');
-  await warmUpDatabase(testData, client);
   
 
-  // Clear the table after warm-up
-  await client.query('DELETE FROM users');
+ 
 
-  for (let threads = 1; threads <= maxThreads; threads++) {
-    const averageDurations = await simulateUserRequests(threads, client);
-    averageDurationsByThreads.push(averageDurations);
-  }
-
-  console.log("\nUser requests simulation completed.");
-
-  // Calculate overall average durations
-  const totalAverageDurations = averageDurationsByThreads.reduce((acc, curr) => {
-    return acc.map((value, index) => value + curr[index]);
-  }, [0, 0, 0, 0]);
-
-  const overallAverageDurations = totalAverageDurations.map(value => value / maxThreads);
-
-  console.log(`\nOverall Average Write Operation Duration: ${overallAverageDurations[0].toFixed(3)} ms`);
-  console.log(`Overall Average Read Operation Duration: ${overallAverageDurations[1].toFixed(3)} ms`);
-  console.log(`Overall Average Update Operation Duration: ${overallAverageDurations[2].toFixed(3)} ms`);
-  console.log(`Overall Average Delete Operation Duration: ${overallAverageDurations[3].toFixed(3)} ms`);
   
-  await runComplexQueryTests(client);
 
   await client.end();
 }

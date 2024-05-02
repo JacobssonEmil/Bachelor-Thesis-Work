@@ -1,11 +1,11 @@
 const createUserTable = `
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    email VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     age INTEGER,
-    created_at TIMESTAMP,
-    last_login TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    last_login TIMESTAMPTZ,
     status VARCHAR(50),
     country VARCHAR(100)
   );
@@ -18,6 +18,7 @@ async function setupDatabase(client) {
   // Define a User class to represent the users table
   class User {
     constructor(data) {
+      this.id = data.id; // Ensure id is also handled if you're manipulating it elsewhere in your code
       this.name = data.name;
       this.email = data.email;
       this.age = data.age;
