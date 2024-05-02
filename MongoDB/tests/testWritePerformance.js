@@ -6,6 +6,7 @@ async function testWritePerformance(testData) {
   await User.insertMany(testData);
   const end = performanceNow();
   const duration = (end - start).toFixed(3);
+  
   return duration;
 }
 
