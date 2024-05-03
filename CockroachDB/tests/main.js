@@ -1,73 +1,65 @@
+require('dotenv').config(); // Load environment variables
+const { Client } = require('pg'); // Import the Client class from the pg module
 const os = require('os');
-const { Client } = require('pg');
+
 const generateTestData = require('./generateTestData');
 const testWritePerformance = require('./testWritePerformance');
 const testReadPerformance = require('./testReadPerformance');
 const testUpdatePerformance = require('./testUpdatePerformance');
 const testDeletePerformance = require('./testDeletePerformance');
 const {
-  testUserRetentionAnalysisPerformance,
   testDemographicStatusDistributionPerformance,
-  testInactivityAnalysisPerformance
+  testInactivityAnalysisPerformance,
+  testUserRetentionAnalysisPerformance
 } = require('./testComplexQueryPerformance');
-const User = require('../models/User');
+const setupDatabase = require('../models/User');
 
-async function warmUpDatabase() {
-  console.log('Warming up database...');
-  const currentEntries = 10000; // Adjust the scale for warm-up
-  const testData = await generateTestData(currentEntries);
-  const client = new Client({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'postgres',
-    password: '1234',
-    port: 5432,
-  });
-  await client.connect();
-
-  // Insert initial test data multiple times to increase volume
-  for (let i = 0; i < 3; i++) {
+async function warmUpDatabase(client) {
+  try {
+    console.log('Warming up database...');
+    await client.query('DELETE FROM users;');
+    
+    const smallScale = 10000; // Adjust the scale for warm-up
+    const testData = await generateTestData(smallScale);
     const values = testData.map(user => [user.name, user.email, user.age, user.country]);
     await client.query(`
-      INSERT INTO users (name, email, age, country)
-      VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}')`).join(',')}
+      INSERT INTO users (name, email, age, country, created_at, last_login, status)
+      VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}', NOW(), NULL, 'active')`).join(',')}
     `);
-  }
 
-  // Additional warm-up operations...
-  
-  await client.end();
-  console.log('Database warmed up successfully.');
+    console.log('Database warmed up successfully.');
+  } catch (error) {
+    console.error('Error during warm-up:', error);
+  }
 }
 
 async function runTests() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: true // Set to true for production using verify-full
+    }
+  });
+
   try {
-    console.log('Starting tests...');
-    await warmUpDatabase();
-
-    const client = new Client({
-      user: 'postgres',
-      host: 'localhost',
-      database: 'postgres',
-      password: '1234',
-      port: 5432,
-    });
     await client.connect();
+    console.log('Connected to CockroachDB');
 
-    // Clean up existing data
-    await client.query('DELETE FROM users');
+    // Warm up the database
+    await warmUpDatabase(client);
 
-    const scales = [100, 1000, 10000, 100000, 1000000]; // Different scales to test
+    const scales = [190000]; // Different scales to test
 
     for (const scale of scales) {
       console.log(`\n\nTesting with ${scale} records...`);
-      await client.query('DELETE FROM users');
+      await client.query('DELETE FROM users;');
+
       // Generate test data
       const testData = await generateTestData(scale);
       const values = testData.map(user => [user.name, user.email, user.age, user.country]);
       await client.query(`
-        INSERT INTO users (name, email, age, country)
-        VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}')`).join(',')}
+        INSERT INTO users (name, email, age, country, created_at, last_login, status)
+        VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}', NOW(), NULL, 'active')`).join(',')}
       `);
 
       // Test CRUD Performance
@@ -88,7 +80,7 @@ async function runTests() {
         const updateDuration = await testUpdatePerformance({ originalEmail: sampleUser.email, newEmail: `updated_${sampleUser.email}` }, client);
         totalUpdateDuration += parseFloat(updateDuration);
     
-        const deleteDuration = await testDeletePerformance(`updated_${sampleUser.email}`, client);
+        const deleteDuration = await testDeletePerformance(sampleUser.email, client);
         totalDeleteDuration += parseFloat(deleteDuration);
       }
 
@@ -106,11 +98,15 @@ async function runTests() {
       await testDemographicStatusDistributionPerformance(client);
       await testInactivityAnalysisPerformance(client);
     }
-    await client.query('DELETE FROM users');
-    await client.end();
-    console.log('Tests completed successfully.');
+
+    console.log('All tests completed successfully.');
   } catch (error) {
     console.error('An error occurred during the tests:', error);
+  } finally {
+    // Disconnect from CockroachDB
+    await client.query('DELETE FROM users;');
+    await client.end();
+    console.log('Database connection closed.');
   }
 }
 

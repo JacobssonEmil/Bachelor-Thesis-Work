@@ -51,6 +51,7 @@ async function warmUpDatabase() {
 async function runTests() {
     try {
         console.log("Connected to Neo4j");
+        await clearDatabase(driver);
 
         // Warm-up phase
         await warmUpDatabase();
