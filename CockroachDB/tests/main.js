@@ -12,25 +12,23 @@ const {
   testInactivityAnalysisPerformance,
   testUserRetentionAnalysisPerformance
 } = require('./testComplexQueryPerformance');
-const setupDatabase = require('../models/User');
+
+const scales = [100, 1000, 10000, 100000]; // Different scales to test
+const numRuns = 10; // Number of test runs
 
 async function warmUpDatabase(client) {
-  try {
-    console.log('Warming up database...');
-    await client.query('DELETE FROM users;');
-    
-    const smallScale = 10000; // Adjust the scale for warm-up
-    const testData = await generateTestData(smallScale);
-    const values = testData.map(user => [user.name, user.email, user.age, user.country]);
-    await client.query(`
-      INSERT INTO users (name, email, age, country, created_at, last_login, status)
-      VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}', NOW(), NULL, 'active')`).join(',')}
-    `);
+  console.log('Warming up database...');
+  await client.query('DELETE FROM users;');
 
-    console.log('Database warmed up successfully.');
-  } catch (error) {
-    console.error('Error during warm-up:', error);
-  }
+  const smallScale = 100; // Adjust the scale for warm-up
+  const testData = await generateTestData(smallScale);
+  const values = testData.map(user => [user.name, user.email, user.age, user.country]);
+  await client.query(`
+    INSERT INTO users (name, email, age, country, created_at, last_login, status)
+    VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}', NOW(), NULL, 'active')`).join(',')}
+  `);
+
+  console.log('Database warmed up successfully.');
 }
 
 async function runTests() {
@@ -43,67 +41,72 @@ async function runTests() {
 
   try {
     await client.connect();
-    console.log('Connected to CockroachDB');
+    console.log('Connected to PostgreSQL');
 
-    // Warm up the database
-    await warmUpDatabase(client);
-
-    const scales = [190000]; // Different scales to test
-
+    const results = {};
     for (const scale of scales) {
-      console.log(`\n\nTesting with ${scale} records...`);
-      await client.query('DELETE FROM users;');
-
-      // Generate test data
-      const testData = await generateTestData(scale);
-      const values = testData.map(user => [user.name, user.email, user.age, user.country]);
-      await client.query(`
-        INSERT INTO users (name, email, age, country, created_at, last_login, status)
-        VALUES ${values.map(data => `('${data[0]}', '${data[1]}', ${data[2]}, '${data[3]}', NOW(), NULL, 'active')`).join(',')}
-      `);
-
-      // Test CRUD Performance
-      const writeDuration = await testWritePerformance(testData, client);
-      console.log(`Write Duration for ${scale} records: ${writeDuration} ms`);
-
-      const points = [Math.floor(scale / 1.5), Math.floor(scale / 2), Math.floor(scale / 3)]; // 67%, 50%, and 33% marks
-      let totalReadDuration = 0;
-      let totalUpdateDuration = 0;
-      let totalDeleteDuration = 0;
-
-      for (const point of points) {
-        const sampleUser = testData[point];
-    
-        const readDuration = await testReadPerformance(sampleUser.email, client);
-        totalReadDuration += parseFloat(readDuration);
-    
-        const updateDuration = await testUpdatePerformance({ originalEmail: sampleUser.email, newEmail: `updated_${sampleUser.email}` }, client);
-        totalUpdateDuration += parseFloat(updateDuration);
-    
-        const deleteDuration = await testDeletePerformance(sampleUser.email, client);
-        totalDeleteDuration += parseFloat(deleteDuration);
-      }
-
-      const averageReadDuration = totalReadDuration / points.length;
-      const averageUpdateDuration = totalUpdateDuration / points.length;
-      const averageDeleteDuration = totalDeleteDuration / points.length;
-
-      console.log(`Average Read Duration for ${scale} records: ${averageReadDuration.toFixed(3)} ms`);
-      console.log(`Average Update Duration for ${scale} records: ${averageUpdateDuration.toFixed(3)} ms`);
-      console.log(`Average Delete Duration for ${scale} records: ${averageDeleteDuration.toFixed(3)} ms`);
-
-      // Test Complex Query Performance
-      console.log(`Running complex query tests for ${scale}`);
-      await testUserRetentionAnalysisPerformance(client);
-      await testDemographicStatusDistributionPerformance(client);
-      await testInactivityAnalysisPerformance(client);
+      results[scale] = {
+        totalWriteDuration: 0,
+        totalReadDuration: 0,
+        totalUpdateDuration: 0,
+        totalDeleteDuration: 0,
+        totalUserRetentionAnalysisDuration: 0,
+        totalDemographicStatusDistributionDuration: 0,
+        totalInactivityAnalysisDuration: 0
+      };
     }
 
-    console.log('All tests completed successfully.');
+    for (let run = 0; run < numRuns; run++) {
+      console.log(`Starting run ${run + 1}...`);
+      await warmUpDatabase(client);
+
+      for (const scale of scales) {
+        console.log(`\nTesting with ${scale} records...`);
+        await client.query('DELETE FROM users;');
+
+        const testData = await generateTestData(scale);
+        
+        const writeDuration = await testWritePerformance(testData, client);
+        results[scale].totalWriteDuration += parseFloat(writeDuration);
+
+        const points = [Math.floor(scale / 1.5), Math.floor(scale / 2), Math.floor(scale / 3)];
+        for (const point of points) {
+          const sampleUser = testData[point];
+      
+          const readDuration = await testReadPerformance(sampleUser.email, client);
+          results[scale].totalReadDuration += parseFloat(readDuration);
+      
+          const updateDuration = await testUpdatePerformance({ originalEmail: sampleUser.email, newEmail: `updated_${sampleUser.email}` }, client);
+          results[scale].totalUpdateDuration += parseFloat(updateDuration);
+      
+          const deleteDuration = await testDeletePerformance(sampleUser.email, client);
+          results[scale].totalDeleteDuration += parseFloat(deleteDuration);
+        }
+
+        const userRetentionAnalysisDuration = await testUserRetentionAnalysisPerformance(client);
+        const demographicStatusDistributionDuration = await testDemographicStatusDistributionPerformance(client);
+        const inactivityAnalysisDuration = await testInactivityAnalysisPerformance(client);
+
+        results[scale].totalUserRetentionAnalysisDuration += parseFloat(userRetentionAnalysisDuration);
+        results[scale].totalDemographicStatusDistributionDuration += parseFloat(demographicStatusDistributionDuration);
+        results[scale].totalInactivityAnalysisDuration += parseFloat(inactivityAnalysisDuration);
+      }
+    }
+
+    console.log('\nAggregated Test Results:');
+    for (const scale of scales) {
+      console.log(`\nScale: ${scale}`);
+      console.log(`Average Write Duration: ${(results[scale].totalWriteDuration / numRuns).toFixed(3)} ms`);
+      console.log(`Average Read Duration: ${(results[scale].totalReadDuration / (numRuns * 3)).toFixed(3)} ms`);
+      console.log(`Average Update Duration: ${(results[scale].totalUpdateDuration / (numRuns * 3)).toFixed(3)} ms`);
+      console.log(`Average Delete Duration: ${(results[scale].totalDeleteDuration / (numRuns * 3)).toFixed(3)} ms`);
+      console.log(`Average User Retention Analysis Duration: ${(results[scale].totalUserRetentionAnalysisDuration / numRuns).toFixed(3)} ms`);
+      console.log(`Average Demographic Status Distribution Duration: ${(results[scale].totalDemographicStatusDistributionDuration / numRuns).toFixed(3)} ms`);
+      console.log(`Average Inactivity Analysis Duration: ${(results[scale].totalInactivityAnalysisDuration / numRuns).toFixed(3)} ms`);
+    }
   } catch (error) {
     console.error('An error occurred during the tests:', error);
   } finally {
-    // Disconnect from CockroachDB
     await client.query('DELETE FROM users;');
     await client.end();
     console.log('Database connection closed.');

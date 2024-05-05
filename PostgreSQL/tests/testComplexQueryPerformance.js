@@ -18,7 +18,8 @@ async function testUserRetentionAnalysisPerformance(client) {
   await client.query(userRetentionQuery);
 
   const end = performanceNow();
-  console.log(`User Retention Analysis operation took: ${(end - start).toFixed(3)} ms`);
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 // Test Demographic and Status Distribution Query Performance
@@ -41,7 +42,8 @@ async function testDemographicStatusDistributionPerformance(client) {
   await client.query(demographicQuery);
 
   const end = performanceNow();
-  console.log(`Demographic and Status Distribution operation took: ${(end - start).toFixed(3)} ms`);
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 // Test Inactivity Analysis for Potential Account Cleanup Performance
@@ -63,7 +65,8 @@ async function testInactivityAnalysisPerformance(client) {
   await client.query(inactivityQuery);
 
   const end = performanceNow();
-  console.log(`Inactivity Analysis operation took: ${(end - start).toFixed(3)} ms`);
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 module.exports = { testDemographicStatusDistributionPerformance, testInactivityAnalysisPerformance, testUserRetentionAnalysisPerformance };

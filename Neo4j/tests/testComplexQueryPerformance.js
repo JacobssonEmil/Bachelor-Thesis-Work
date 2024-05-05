@@ -18,9 +18,10 @@ async function testUserRetentionAnalysisPerformance(driver) {
 
   await session.run(query);
   const end = performanceNow();
-  console.log(`User Retention Analysis operation took: ${(end - start).toFixed(3)} ms`);
 
   await session.close();
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 // Test Demographic and Status Distribution Query Performance
@@ -41,9 +42,11 @@ async function testDemographicStatusDistributionPerformance(driver) {
 
   await session.run(query);
   const end = performanceNow();
-  console.log(`Demographic and Status Distribution operation took: ${(end - start).toFixed(3)} ms`);
+  
 
   await session.close();
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 // Test Inactivity Analysis for Potential Account Cleanup Performance
@@ -65,9 +68,11 @@ async function testInactivityAnalysisPerformance(driver) {
 
   await session.run(query);
   const end = performanceNow();
-  console.log(`Inactivity Analysis operation took: ${(end - start).toFixed(3)} ms`);
+  
 
   await session.close();
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 module.exports = {

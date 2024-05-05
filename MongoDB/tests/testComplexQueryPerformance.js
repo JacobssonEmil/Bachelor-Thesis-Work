@@ -29,7 +29,8 @@ async function testUserRetentionAnalysisPerformance() {
   ]);
 
   const end = performanceNow();
-  console.log(`User Retention Analysis operation took: ${(end - start).toFixed(3)} ms`);
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 // Test Demographic and Status Distribution Query Performance
@@ -53,7 +54,8 @@ async function testDemographicStatusDistributionPerformance() {
   ]);
 
   const end = performanceNow();
-  console.log(`Demographic and Status Distribution operation took: ${(end - start).toFixed(3)} ms`);
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 // Test Inactivity Analysis for Potential Account Cleanup Performance
@@ -83,7 +85,8 @@ async function testInactivityAnalysisPerformance() {
   ]);
 
   const end = performanceNow();
-  console.log(`Inactivity Analysis operation took: ${(end - start).toFixed(3)} ms`);
+  const duration = (end - start).toFixed(3);
+  return duration;
 }
 
 module.exports = {testDemographicStatusDistributionPerformance, testInactivityAnalysisPerformance, testUserRetentionAnalysisPerformance};
