@@ -7,7 +7,6 @@ async function testWritePerformance(testData, client) {
   const insertQuery = `
     INSERT INTO users (name, email, age, created_at, last_login, status, country)
     VALUES ${testData.map(data => `('${data.name}', '${data.email}', ${data.age}, '${data.createdAt}', '${data.lastLogin}', '${data.status}', '${data.country}')`).join(',')}
-    ON CONFLICT (email) DO NOTHING
   `;
 
   await client.query(insertQuery);

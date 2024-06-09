@@ -1,5 +1,5 @@
-require('dotenv').config(); // Load environment variables
-const { Client } = require('pg'); // Import the Client class from the pg module
+require('dotenv').config(); 
+const { Client } = require('pg');
 const os = require('os');
 
 const generateTestData = require('./generateTestData');
@@ -13,12 +13,11 @@ const {
   testUserRetentionAnalysisPerformance
 } = require('./testComplexQueryPerformance');
 
-const scales = [100, 1000, 10000, 100000]; // Different scales to test
-const numRuns = 10; // Number of test runs
+const scales = [100, 1000, 10000, 100000, 1000000]; 
+const numRuns = 10; 
 
 async function warmUpDatabase(client) {
   console.log('Warming up database...');
-  await client.query('DELETE FROM users;');
 
   const smallScale = 100; // Adjust the scale for warm-up
   const testData = await generateTestData(smallScale);
@@ -35,13 +34,13 @@ async function runTests() {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: {
-      rejectUnauthorized: true // Set to true for production using verify-full
+      rejectUnauthorized: true 
     }
   });
 
   try {
     await client.connect();
-    console.log('Connected to PostgreSQL');
+    console.log('Connected to CockroachDB');
 
     const results = {};
     for (const scale of scales) {

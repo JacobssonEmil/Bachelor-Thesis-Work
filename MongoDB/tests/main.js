@@ -11,15 +11,15 @@ const {
   testInactivityAnalysisPerformance
 } = require('./testComplexQueryPerformance');
 
-const scales = [100, 1000, 10000, 100000, 1000000]; // Different scales to test
-const numRuns = 10; // Number of test runs
+const scales = [100, 1000, 10000, 100000, 1000000]; 
+const numRuns = 10; 
 
 // MongoDB Connection URI
 const mongoURI = 'mongodb://localhost:27017/testdb';
 
 async function warmUpDatabase() {
   console.log('Warming up database...');
-  const smallScale = 10000; // Adjust the scale for warm-up
+  const smallScale = 100; // Adjust the scale for warm-up
   const testData = await generateTestData(smallScale);
   await User.insertMany(testData);
   console.log('Database warmed up successfully.');

@@ -15,8 +15,8 @@ const user = "neo4j";
 const password = "12345678";
 const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
 
-const scales = [1000000]; // Different scales to test
-const numRuns = 10; // Number of test runs
+const scales = [100, 1000, 10000, 100000, 1000000];
+const numRuns = 10; 
 
 async function clearDatabase(driver) {
     const session = driver.session();

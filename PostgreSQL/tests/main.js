@@ -14,7 +14,7 @@ const User = require('../models/User');
 
 async function warmUpDatabase() {
   console.log('Warming up database...');
-  const currentEntries = 10000; // Adjust the scale for warm-up
+  const currentEntries = 100; // Adjust the scale for warm-up
   const testData = await generateTestData(currentEntries);
   const client = new Client({
     user: 'postgres',
